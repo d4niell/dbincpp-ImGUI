@@ -76,12 +76,16 @@ static int callback_login(void* NotUsed, int argc, char** argv, char** azColName
         if (i == 0)
         {
             if (argv[0] == user.u_name && argv[1] == user.u_pass) {
-                ui::userPanel();
+                globals.userpanel = true;
+              //  ui::userPanel();
+            }
+            else {
+                ImGui::Text("Invalid Username/password");
             }
             // printf("name: %s price: $%s", argv[0], argv[1]);
         }
     }
-    printf("\n");
+   // printf("\n");
     return 0;
 }
 static int fetch_credentials(const char* s, std::string sql)
@@ -398,7 +402,7 @@ void ui::render() {
                 if (ImGui::Button("Login")) {
                     user.u_name = globals.user_name;
                     user.u_pass = globals.pass_word;
-                    globals.userpanel = true;
+
                     l_login();
                 }
                 if (ImGui::Button("Register")) {
