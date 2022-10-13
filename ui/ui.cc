@@ -4,6 +4,8 @@
 #include "../imgui/imgui_internal.h"
 #include "../sqlite/sqlite3.h"
 #include <iostream>
+#include <sstream>
+#include <fstream>
 static bool istrue = false;
 const char* dir = "c:\\Database.db";
 struct {
@@ -107,12 +109,13 @@ static int callback_username(void* NotUsed, int argc, char** argv, char** azColN
         ImGui::Text("Username:");
         ImGui::SameLine();
         ImGui::Text(argv[0]);
+        ImGui::SameLine();
     }
     return 0;
 }
 static int fetchuserUsername(const char* s)
 {
-    std::string sql = "SELECT cash FROM User WHERE username = '" + user.u_name + "';";
+    std::string sql = "SELECT username FROM User WHERE username = '" + user.u_name + "';";
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -189,8 +192,11 @@ static int fetchuserCASH(const char* s)
     else
         return 0;
 }
+std::string s_i;
 static int insertData(const char* s, std::string sql)
 {
+    std::ofstream data;
+    data.open("data.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -198,11 +204,14 @@ static int insertData(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
         std::cerr << "Error in insertData function." << std::endl;
+        data << "\n\n" << s_i << ":" << globals.user_name;
+        data.close();
         sqlite3_free(messageError);
     }
     else
         return 0;
 }
+
 void buy_item_from_marketplace() {
     select_from_marketplace(dir);
  
@@ -303,6 +312,20 @@ static int createTable(const char* s) {
 
     return 0;
 }
+void view_atm() {
+        static int i;
+        ImGui::SliderInt("Money", &i, 0, 100000, "%d", ImGuiSliderFlags_Logarithmic);
+        std::stringstream ss;
+        ss << i;
+        s_i = ss.str();
+        if (ImGui::Button("Add Money")) {
+            std::string sql = "UPDATE User SET cash = " + s_i + " WHERE username = '" + globals.user_name + "';";
+            insertData(dir, sql.c_str());
+        }
+        if (ImGui::Button("Back")) {
+            globals.ATM = false;
+        }
+}
 void ui::userPanel() {
     if (!globals.active) return;
     ImGui::SameLine();
@@ -317,19 +340,19 @@ void ui::userPanel() {
     }
     ImGui::SameLine();
     if (ImGui::Button("ATM")) {
-        //TODO ATM
+        globals.ATM = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Inventory")) {
         //TODO Inventory
     }
     ImGui::SameLine();
-    if (ImGui::Button("Log Out")) {
-        //TODO Log out
+    if (ImGui::Button("Job Selector")) {
+        //TODO Job Selector
     }
     ImGui::SameLine();
-    if (ImGui::Button("Job Selector")) {
-        //TODO JOB
+    if (ImGui::Button("Log Out")) {
+        //TODO Log out
 
     }
     fetchuserUsername(dir);
@@ -363,32 +386,36 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (buy_item != true) {
-            if (globals.marketplace != true) {
-                if (globals.userpanel != true) {
-                    ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                    ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                    if (ImGui::Button("Login")) {
-                        user.u_name = globals.user_name;
-                        user.u_pass = globals.pass_word;
+        if (globals.ATM != true) {
+            if (buy_item != true) {
+                if (globals.marketplace != true) {
+                    if (globals.userpanel != true) {
+                        ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                        ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                        if (ImGui::Button("Login")) {
+                            user.u_name = globals.user_name;
+                            user.u_pass = globals.pass_word;
 
-                        l_login();
+                            l_login();
+                        }
+                        ImGui::SameLine();
+                        if (ImGui::Button("Register")) {
+                            user.u_name = globals.user_name;
+                            user.u_pass = globals.pass_word;
+                            r_register();
+                        }
                     }
-                    ImGui::SameLine();
-                    if (ImGui::Button("Register")) {
-                        user.u_name = globals.user_name;
-                        user.u_pass = globals.pass_word;
-                        r_register();
-                    }
+                    else
+                        userPanel();
                 }
                 else
-                    userPanel();
+                    View_Marketplace();
             }
             else
-                View_Marketplace();
+                buy_item_from_marketplace();
         }
         else
-            buy_item_from_marketplace();
+            view_atm();
        
     }
     ImGui::End();
