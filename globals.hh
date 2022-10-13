@@ -15,10 +15,6 @@ public:
 	bool log_out = false;
 	char user_item[100];
 	char user_item_price[100];
-};
-static const char* template_items_names[] =
-{
-	"Banana", "Apple", "Cherry", "Watermelon", "Grapefruit", "Strawberry", "Mango",
-	"Kiwi", "Orange", "Pineapple", "Blueberry", "Plum", "Coconut", "Pear", "Apricot"
+	char item[100];
 };
 inline c_globals globals;

@@ -17,6 +17,7 @@ public:
     std::string user_uid;
 
 }user;
+static bool buy_item = false;
 static int callback_login(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc; i++) {
@@ -188,10 +189,38 @@ static int fetchuserCASH(const char* s)
     else
         return 0;
 }
+static int insertData(const char* s, std::string sql)
+{
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here */
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+void buy_item_from_marketplace() {
+    select_from_marketplace(dir);
+ 
+    ImGui::InputText("Item name", globals.item, IM_ARRAYSIZE(globals.item));
+    if (ImGui::Button("Buy Item")) {
+        std::string item = globals.item;
+        std::string sql = "INSERT INTO Inventory (userID, item, amount) VALUES (" + user.user_uid + ", '" + item + "', 1)";
+        insertData(dir, sql);
+    }
+
+}
 void View_Marketplace() {
     if (ImGui::TreeNode("Listed Items")) {
         select_from_marketplace(dir);
         ImGui::TreePop();
+        if (ImGui::Button("Buy Item")) {
+            buy_item = true;
+        }
     }     
     if (ImGui::TreeNode("Add Item")) {
         ImGui::InputText("Item name", globals.user_item, IM_ARRAYSIZE(globals.user_item));
@@ -201,6 +230,7 @@ void View_Marketplace() {
         if (ImGui::Button("Add Item")) {
             insert_into_marketplace(dir);
         }
+
         ImGui::TreePop();
     }
     if (ImGui::Button("Back")) {
@@ -333,28 +363,32 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (globals.marketplace != true) {
-            if (globals.userpanel != true) {
-                ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                if (ImGui::Button("Login")) {
-                    user.u_name = globals.user_name;
-                    user.u_pass = globals.pass_word;
+        if (buy_item != true) {
+            if (globals.marketplace != true) {
+                if (globals.userpanel != true) {
+                    ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                    ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                    if (ImGui::Button("Login")) {
+                        user.u_name = globals.user_name;
+                        user.u_pass = globals.pass_word;
 
-                    l_login();
+                        l_login();
+                    }
+                    ImGui::SameLine();
+                    if (ImGui::Button("Register")) {
+                        user.u_name = globals.user_name;
+                        user.u_pass = globals.pass_word;
+                        r_register();
+                    }
                 }
-                ImGui::SameLine();
-                if (ImGui::Button("Register")) {
-                    user.u_name = globals.user_name;
-                    user.u_pass = globals.pass_word;
-                    r_register();
-                }
+                else
+                    userPanel();
             }
             else
-                userPanel();
+                View_Marketplace();
         }
         else
-            View_Marketplace();
+            buy_item_from_marketplace();
        
     }
     ImGui::End();
