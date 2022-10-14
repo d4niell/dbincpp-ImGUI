@@ -16,5 +16,6 @@ public:
 	char user_item[100];
 	char user_item_price[100];
 	char item[100];
+	bool inventory = false;
 };
 inline c_globals globals;
