@@ -17,5 +17,10 @@ public:
 	char user_item_price[100];
 	char item[100];
 	bool inventory = false;
+	bool user_list = false;
+	char modify_username[100];
+	char modify_password[100];
+	char modify_cash[100];
+	bool modify_user = false;
 };
 inline c_globals globals;

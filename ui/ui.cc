@@ -17,6 +17,10 @@ public:
     std::string marketplace_item_name;
     std::string marketplace_item_price;
     std::string user_uid;
+    std::string user_modify_name;
+    std::string user_modify_cash;
+    std::string user_modify_uid;
+    std::string user_modify_password;
 
     int user_cash;
 }user;
@@ -115,10 +119,30 @@ static int callback_CASH(void* NotUsed, int argc, char** argv, char** azColName)
 }
 static int callback_username(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
+    static float Alpha = 255;
+    static bool tick = false;
+    static float Speed = 1.0f;
+    if (tick || Alpha >= 255) {
+        tick = true;
+        if (!(Alpha <= 0)) 
+            Alpha -= Speed;
+            else if (Alpha <= 0) 
+            tick ^= 1;
+        
+        
+    }
+    else if (!tick || Alpha != 255)
+    {
+        tick = false;
+        if (!(Alpha >= 255))
+            Alpha += Speed;
+        else if (Alpha >= 255)
+            tick ^= 1;
+    }
     for (i = 0; i < argc; i++) {
         ImGui::Text("Username:");
         ImGui::SameLine();
-        ImGui::Text(argv[0]);
+        ImGui::TextColored(ImColor(255, 0, 255, (int)Alpha), argv[0]);
         ImGui::SameLine();
     }
     return 0;
@@ -417,9 +441,13 @@ void view_atm() {
 static int check_for_inventory_items_callback(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc - 1; i++) {
-        ImGui::Text("item: %s", argv[0]);
+        ImGui::Text("item:");
         ImGui::SameLine();
-        ImGui::Text("quantity: %s", argv[1]);
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
+        ImGui::SameLine();
+        ImGui::Text("quantity:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
         ImGui::Separator();
     }
     return 0;
@@ -443,9 +471,13 @@ static int check_for_inventory_items(const char* s) {
 static int check_for_listed_items_callback(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc - 1; i++) {
-        ImGui::Text("item: %s", argv[0]);
+        ImGui::Text("item:");
         ImGui::SameLine();
-        ImGui::Text("price: %s", argv[1]);
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
+        ImGui::SameLine();
+        ImGui::Text("price: $");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
         ImGui::Separator();
     }
     return 0;
@@ -467,6 +499,7 @@ static int check_for_listed_items(const char* s) {
         return 0;
 }
 void view_inventory() {
+    ImGui::Text("Item(s) you have in inventory:");
     check_for_inventory_items(dir);
     ImGui::Text("Item(s) you have listed in marketplace:");
     check_for_listed_items(dir);
@@ -475,7 +508,153 @@ void view_inventory() {
     }
 
 }
+static int userlist_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc - 3; i++) {
+        ImGui::Text("UID:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
+        ImGui::SameLine();
+        ImGui::Text("username:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
+        ImGui::SameLine();
+        ImGui::Text("password:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[2]);
+        ImGui::SameLine();
+        ImGui::Text("cash:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[3]);
+        ImGui::SameLine();
+        ImGui::Separator();   
+    }
+    
+    ImGui::Text("Modify ");
+    ImGui::SameLine();
+    if (ImGui::Button(argv[1])) {
+        user.user_modify_name = argv[1];
+        user.user_modify_cash = argv[3];
+        user.user_modify_password = argv[2];
+        user.user_modify_uid = argv[0];
+        globals.modify_user = true;
+    }
+    return 0;
+
+}
+static int find_wanted_usercallback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc - 3; i++) {
+        ImGui::Text("UID:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
+        ImGui::SameLine();
+        ImGui::Text("username:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
+        ImGui::SameLine();
+        ImGui::Text("password:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[2]);
+        ImGui::SameLine();
+        ImGui::Text("cash:");
+        ImGui::SameLine();
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[3]);
+        ImGui::SameLine();
+        ImGui::Separator();
+    }
+    return 0;
+
+}
+static int find_wanted_user(const char* s) {
+    std::string item = globals.item;
+    std::string sql_query = "SELECT * FROM User WHERE username = '" + user.user_modify_name + "';";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), find_wanted_usercallback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+static int set_new_values(const char* s,std::string sql) {
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+    exit = sqlite3_exec(db, sql.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+void modify_user() {
+    find_wanted_user(dir);
+    ImGui::Separator();
+    if (ImGui::TreeNode("Edit Username")) {
+        ImGui::InputText("new username", globals.modify_username, IM_ARRAYSIZE(globals.modify_username));
+        if (ImGui::Button("send")) {
+            std::string newname = globals.modify_username;
+            std::string sql = "UPDATE User SET username = '" + newname + "' WHERE username = '" + user.user_modify_name + "';";
+            set_new_values(dir, sql);
+            find_wanted_user(dir);
+        }
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Edit password")) {
+        ImGui::InputText("new password", globals.modify_password, IM_ARRAYSIZE(globals.modify_password));
+        if (ImGui::Button("send")) {
+            std::string newpass = globals.modify_password;
+            std::string sql = "UPDATE User SET password = '" + newpass + "' WHERE username = '" + user.user_modify_name + "';";
+            set_new_values(dir, sql);
+            find_wanted_user(dir);
+        }
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Edit cash")) {
+        ImGui::InputText("new amount", globals.modify_cash, IM_ARRAYSIZE(globals.modify_cash));
+        if (ImGui::Button("send")) {
+            std::string newpass = globals.modify_cash;
+            std::string sql = "UPDATE User SET cash = '" + newpass + "' WHERE username = '" + user.user_modify_name + "';";
+            set_new_values(dir, sql);
+            find_wanted_user(dir);
+            
+        }
+        ImGui::TreePop();
+    }
+    if (ImGui::Button("Back")) {
+        globals.modify_user = false;
+    }
+}
+static int userlist(const char* s) {
+    std::string item = globals.item;
+    std::string sql_query = "SELECT * FROM User";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), userlist_callback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+void view_userlist() {
+    userlist(dir);
+
+    if (ImGui::Button("Back")) {
+        globals.user_list = false;
+    }
+}
 void ui::userPanel() {
+
     if (!globals.active) return;
     ImGui::SameLine();
     if (ImGui::Button("Marketplace")) {
@@ -507,7 +686,19 @@ void ui::userPanel() {
     fetchuserUsername(dir);
     fetchuserUID(dir);
     fetchuserCASH(dir);
+    if (user.user_uid == "1") {
+        ImGui::Separator();
+        ImGui::TextColored(ImColor(255, 0, 255), "Admin Tools");
+        if (ImGui::Button("User List")) {
+            globals.user_list = true;
+        }
+        if (ImGui::Button("Remove Item(s)")) {
+        
+        }
 
+    }
+    else
+        ImGui::Separator();
     //ImGui::Text("Welcome back, " + globals.user_name);
 }
 void r_register() {
@@ -535,45 +726,53 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (globals.inventory != true) {
-            if (confirm_item_from_marketplace != true) {
-                if (globals.ATM != true) {
-                    if (buy_item != true) {
-                        if (globals.marketplace != true) {
-                            if (globals.userpanel != true) {
-                                ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                                ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                                if (ImGui::Button("Login")) {
-                                    user.u_name = globals.user_name;
-                                    user.u_pass = globals.pass_word;
+        if (globals.modify_user != true) {
+            if (globals.user_list != true) {
+                if (globals.inventory != true) {
+                    if (confirm_item_from_marketplace != true) {
+                        if (globals.ATM != true) {
+                            if (buy_item != true) {
+                                if (globals.marketplace != true) {
+                                    if (globals.userpanel != true) {
+                                        ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                                        ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                                        if (ImGui::Button("Login")) {
+                                            user.u_name = globals.user_name;
+                                            user.u_pass = globals.pass_word;
 
-                                    l_login();
+                                            l_login();
+                                        }
+                                        ImGui::SameLine();
+                                        if (ImGui::Button("Register")) {
+                                            user.u_name = globals.user_name;
+                                            user.u_pass = globals.pass_word;
+                                            r_register();
+                                        }
+                                    }
+                                    else
+                                        userPanel();
                                 }
-                                ImGui::SameLine();
-                                if (ImGui::Button("Register")) {
-                                    user.u_name = globals.user_name;
-                                    user.u_pass = globals.pass_word;
-                                    r_register();
-                                }
+                                else
+                                    View_Marketplace();
                             }
                             else
-                                userPanel();
+                                buy_item_from_marketplace();
                         }
                         else
-                            View_Marketplace();
+                            view_atm();
                     }
                     else
-                        buy_item_from_marketplace();
+                        confirm_purchase();
                 }
                 else
-                    view_atm();
+                    view_inventory();
+
             }
             else
-                confirm_purchase();
+                view_userlist();
         }
         else
-            view_inventory();
-
+            modify_user();
     }
     ImGui::End();
 }
