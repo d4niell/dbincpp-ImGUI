@@ -6,7 +6,9 @@
 #include <iostream>
 #include <sstream>
 #include <fstream>
+#include <ctime>
 static bool istrue = false;
+static int fetch_logins(const char* s);
 const char* dir = "c:\\Database.db";
 struct {
 public:
@@ -21,6 +23,7 @@ public:
     std::string user_modify_cash;
     std::string user_modify_uid;
     std::string user_modify_password;
+    int total_logins;
 
     int user_cash;
 }user;
@@ -414,6 +417,19 @@ static int createTable(const char* s) {
                 if (exit != SQLITE_OK) {
                     sqlite3_free(Error);
                 }
+                else {
+                    query = "CREATE TABLE IF NOT EXISTS Logins ("
+                        "username TEXT NOT NULL,"
+                        "date TEXT NOT NULL);";
+                    exit = sqlite3_open(s, &db);
+                    exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
+
+                    if (exit != SQLITE_OK) {
+                        sqlite3_free(Error);
+                    }
+                    
+
+                }
 
 
             }
@@ -683,6 +699,7 @@ void ui::userPanel() {
         //TODO Log out
 
     }
+
     fetchuserUsername(dir);
     fetchuserUID(dir);
     fetchuserCASH(dir);
@@ -695,6 +712,11 @@ void ui::userPanel() {
         if (ImGui::Button("Remove Item(s)")) {
         
         }
+        if (ImGui::TreeNode("Total logins")) {
+            fetch_logins(dir);
+            ImGui::TreePop();
+        }
+
 
     }
     else
@@ -707,9 +729,55 @@ void r_register() {
     Register(dir, sql.c_str());
 
 }
+static int fetch_logins_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc - 1; i++) {
+        ImGui::Text(argv[0]);
+        ImGui::Text(argv[1]);
+        ImGui::Separator();
+    }
+    return 0;
+
+}
+static int fetch_logins(const char* s) {
+
+    std::string sql_query = "SELECT * FROM Logins";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), fetch_logins_callback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+static int add_logins(const char* s) {
+    time_t now = time(0);
+    char* dt = ctime(&now);
+    std::string sql_query = "INSERT INTO Logins (username, date) VALUES ('" + user.u_name + "', '" + dt + "');";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+        system("pause");
+    }
+    else
+        return 0;
+}
+
 void l_login() {
+
     std::string sql = "SELECT username, password FROM User WHERE username = '" + user.u_name + "' AND password = '" + user.u_pass + "';";
     fetch_credentials(dir, sql.c_str());
+  // sql = "SELECT logins FROM Logins";
+     add_logins(dir);
     ui::userPanel();
 
 }
