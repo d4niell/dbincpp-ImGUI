@@ -23,8 +23,9 @@ public:
     std::string user_modify_cash;
     std::string user_modify_uid;
     std::string user_modify_password;
+    std::string s_username;
     int total_logins;
-
+    std::string s_uid;
     int user_cash;
 }user;
 struct {
@@ -147,6 +148,7 @@ static int callback_username(void* NotUsed, int argc, char** argv, char** azColN
         ImGui::SameLine();
         ImGui::TextColored(ImColor(255, 0, 255, (int)Alpha), argv[0]);
         ImGui::SameLine();
+        user.s_username = argv[0];
     }
     return 0;
 }
@@ -584,7 +586,7 @@ static int find_wanted_usercallback(void* NotUsed, int argc, char** argv, char**
 }
 static int find_wanted_user(const char* s) {
     std::string item = globals.item;
-    std::string sql_query = "SELECT * FROM User WHERE username = '" + user.user_modify_name + "';";
+    std::string sql_query = "SELECT * FROM User WHERE id = '" + user.user_modify_uid + "';";
     sqlite3* db;
     char* messageError;
     int exit = sqlite3_open(s, &db);
@@ -618,7 +620,7 @@ void modify_user() {
             std::string newname = globals.modify_username;
             std::string sql = "UPDATE User SET username = '" + newname + "' WHERE username = '" + user.user_modify_name + "';";
             set_new_values(dir, sql);
-            find_wanted_user(dir);
+
         }
         ImGui::TreePop();
     }
@@ -628,7 +630,7 @@ void modify_user() {
             std::string newpass = globals.modify_password;
             std::string sql = "UPDATE User SET password = '" + newpass + "' WHERE username = '" + user.user_modify_name + "';";
             set_new_values(dir, sql);
-            find_wanted_user(dir);
+
         }
         ImGui::TreePop();
     }
@@ -669,6 +671,76 @@ void view_userlist() {
         globals.user_list = false;
     }
 }
+static int fetch_messages_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc - 1; i++) {
+        ImGui::Text("from: %s", argv[0]);
+        ImGui::Text("message: %s", argv[1]);
+        ImGui::Separator();
+    }
+    return 0;
+
+}
+static int fetch_messages(const char* s) {
+    std::string item = globals.item;
+    std::string sql_query = "SELECT sender_name, message FROM Messages WHERE receiverID = " + user.user_uid + ";";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), fetch_messages_callback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+static int find_user_uid_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc; i++) {
+
+        user.s_uid = argv[0];
+    }
+    return 0;
+
+}
+static int find_user_uid(const char* s) {
+    std::string s_username = globals.user_message_name;
+    std::string sql_query = "SELECT id FROM User WHERE username = '" + s_username + "';";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), find_user_uid_callback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in insertData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+void view_messages() {
+    if (ImGui::TreeNode("View Messages")) {
+        fetch_messages(dir);
+
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("Send Message")) {
+        ImGui::InputText("Username", globals.user_message_name, IM_ARRAYSIZE(globals.user_message_name));
+        ImGui::InputText("Message", globals.user_message, IM_ARRAYSIZE(globals.user_message));
+        if (ImGui::Button("Send")) {
+            find_user_uid(dir);
+            std::string message = globals.user_message;
+            std::string send_message = "INSERT INTO Messages (senderID, sender_name, receiverID, message) VALUES (" + user.user_uid + ",'" + user.s_username + "'," + user.s_uid + ",'" + message  + "');";
+            insertData(dir, send_message);
+        }
+        ImGui::TreePop();
+    }
+    if (ImGui::Button("Back")) {
+        globals.messages = false;
+    }
+}
 void ui::userPanel() {
 
     if (!globals.active) return;
@@ -680,7 +752,7 @@ void ui::userPanel() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Messages")) {
-        //TODO Messages
+        globals.messages = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("ATM")) {
@@ -794,53 +866,57 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (globals.modify_user != true) {
-            if (globals.user_list != true) {
-                if (globals.inventory != true) {
-                    if (confirm_item_from_marketplace != true) {
-                        if (globals.ATM != true) {
-                            if (buy_item != true) {
-                                if (globals.marketplace != true) {
-                                    if (globals.userpanel != true) {
-                                        ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                                        ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                                        if (ImGui::Button("Login")) {
-                                            user.u_name = globals.user_name;
-                                            user.u_pass = globals.pass_word;
+        if (globals.messages != true) {
+            if (globals.modify_user != true) {
+                if (globals.user_list != true) {
+                    if (globals.inventory != true) {
+                        if (confirm_item_from_marketplace != true) {
+                            if (globals.ATM != true) {
+                                if (buy_item != true) {
+                                    if (globals.marketplace != true) {
+                                        if (globals.userpanel != true) {
+                                            ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                                            ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                                            if (ImGui::Button("Login")) {
+                                                user.u_name = globals.user_name;
+                                                user.u_pass = globals.pass_word;
 
-                                            l_login();
+                                                l_login();
+                                            }
+                                            ImGui::SameLine();
+                                            if (ImGui::Button("Register")) {
+                                                user.u_name = globals.user_name;
+                                                user.u_pass = globals.pass_word;
+                                                r_register();
+                                            }
                                         }
-                                        ImGui::SameLine();
-                                        if (ImGui::Button("Register")) {
-                                            user.u_name = globals.user_name;
-                                            user.u_pass = globals.pass_word;
-                                            r_register();
-                                        }
+                                        else
+                                            userPanel();
                                     }
                                     else
-                                        userPanel();
+                                        View_Marketplace();
                                 }
                                 else
-                                    View_Marketplace();
+                                    buy_item_from_marketplace();
                             }
                             else
-                                buy_item_from_marketplace();
+                                view_atm();
                         }
                         else
-                            view_atm();
+                            confirm_purchase();
                     }
                     else
-                        confirm_purchase();
+                        view_inventory();
+
                 }
                 else
-                    view_inventory();
-
+                    view_userlist();
             }
             else
-                view_userlist();
+                modify_user();
         }
         else
-            modify_user();
+            view_messages();
     }
     ImGui::End();
 }

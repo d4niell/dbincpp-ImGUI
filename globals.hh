@@ -22,5 +22,7 @@ public:
 	char modify_password[100];
 	char modify_cash[100];
 	bool modify_user = false;
+	char user_message[100];
+	char user_message_name[100];
 };
 inline c_globals globals;
