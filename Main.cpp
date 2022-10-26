@@ -32,30 +32,24 @@ int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
+        style.WindowRounding = 0.2f;
+        ImGui::GetStyle().FrameBorderSize = 1.5f;
+        ImGui::GetStyle().FrameRounding = 2.0f;
+        ImGui::GetStyle().Alpha = 0.8f;
+        ImGui::GetStyle().ItemSpacing = ImVec2(5,5);
+        style.Colors[ImGuiCol_Border] = ImVec4(255,0,0,255);
 
+    }
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_Init(main_hwnd);
     ImGui_ImplDX9_Init(g_pd3dDevice);
 
-    // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Read 'docs/FONTS.md' for more instructions and details.
-    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-    //IM_ASSERT(font != NULL);
 
-    // Main loop
+
+    ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Comic.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+    IM_ASSERT(font != NULL);
+
+
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
     while (msg.message != WM_QUIT)

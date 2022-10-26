@@ -5,51 +5,32 @@
 #include "../sqlite/sqlite3.h"
 #include <iostream>
 #include <sstream>
+#include <string>
 #include <fstream>
 #include <ctime>
 static bool istrue = false;
 static int fetch_logins(const char* s);
 const char* dir = "c:\\Database.db";
-struct {
-public:
-
-
-    std::string u_name;
-    std::string u_pass;
-    std::string marketplace_item_name;
-    std::string marketplace_item_price;
-    std::string user_uid;
-    std::string user_modify_name;
-    std::string user_modify_cash;
-    std::string user_modify_uid;
-    std::string user_modify_password;
-    std::string s_username;
-    int total_logins;
-    std::string s_uid;
-    int user_cash;
-}user;
-struct {
-public:
-    int listed_item_price;
-    std::string listed_item_name;
-
-}market;
 static bool buy_item = false;
+bool failed = false;
 static bool confirm_item_from_marketplace = false;
 static int callback_login(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc; i++) {
         if (i == 0)
         {
+
             if (argv[0] == user.u_name && argv[1] == user.u_pass) {
                 globals.userpanel = true;
+                MessageBeep(MB_OK);
                 //  ui::userPanel();
-            }
-            else {
-                ImGui::Text("Invalid Username/password");
             }
             // printf("name: %s price: $%s", argv[0], argv[1]);
         }
+        else
+            MessageBeep(MB_ICONERROR);
+            return 0;
+       
     }
     // printf("\n");
     return 0;
@@ -79,6 +60,7 @@ static int Register(const char* s, std::string sql)
 
     if (exit != SQLITE_OK) {
         sqlite3_free(messageError);
+        return 1;
     }
     else
         return(0);
@@ -248,6 +230,7 @@ static int insertData(const char* s, std::string sql)
         sqlite3_free(messageError);
     }
     else
+        MessageBeep(MB_OK);
         return 0;
 }
 static int check_for_sum_callback(void* NotUsed, int argc, char** argv, char** azColName) {
@@ -297,33 +280,27 @@ static int selectData(const char* s, std::string sql)
         return 0;
 }
 void confirm_purchase() {
-
     std::ostringstream str1;
-    if (ImGui::Button("Confirm Purchase")) {
         if (user.user_cash >= market.listed_item_price) {
             std::ofstream myfile;
-            myfile.open("data.txt");
+            myfile.open("c://" + user.u_name + "_purchaseHis.txt", std::ios::app);
             std::string add_inv = "INSERT INTO Inventory (userID, item, amount) VALUES (" + user.user_uid + ", '" + market.listed_item_name + "', 1)";
             insertData(dir, add_inv);
             std::ostringstream str1;
             int pay_amount = user.user_cash - market.listed_item_price;
             str1 << pay_amount; //stores pay_amount into str1
             std::string i_pay_amount = str1.str(); //converts pay_amount which is stored in str1 into i_pay_amount (string)
-            myfile << user.user_uid << ":" << i_pay_amount << ":" << market.listed_item_price << ":" << market.listed_item_name;
+            myfile << "\n" << "money left: " << i_pay_amount << " item price: " << market.listed_item_price << " item name: " << market.listed_item_name;
             myfile.close();
             std::string query = "UPDATE User SET cash = " + i_pay_amount + " WHERE id =" + user.user_uid + ";";
             insertData(dir, query);
             std::string delete_item = "DELETE FROM Marketplace WHERE itemName = '" + market.listed_item_name + "';";
             selectData(dir, delete_item);
+
             confirm_item_from_marketplace = false;
             buy_item = false;
-        }
+        }   
 
-    }
-    if (ImGui::Button("Back")) {
-        confirm_item_from_marketplace = false;
-        buy_item = false;
-    }
 
 }
 
@@ -336,6 +313,10 @@ void buy_item_from_marketplace() {
     if (ImGui::Button("Buy Item")) {
         confirm_item_from_marketplace = true;
         check_for_sum(dir);
+        if (ImGui::Button("Back")) {
+            confirm_item_from_marketplace = false;
+            buy_item = false;
+        }
         confirm_purchase();
     }
 
@@ -442,15 +423,40 @@ static int createTable(const char* s) {
 
     return 0;
 }
+void view_purchase_history() {
+    std::string line;
+    std::fstream myfile;
+    myfile.open("c://" + user.u_name + "_purchaseHis.txt");
+    if (!myfile.is_open()) {
+        MessageBeep(MB_ICONERROR);
+        ImGui::Text("Something went wrong");
+    }
+    else
+        
+    while (getline(myfile, line)) {
+        ImGui::Text(line.c_str());
+    }
+}
 void view_atm() {
+    start:
     static int i;
+    std::stringstream cash;
+    cash << user.user_cash;
+    std::string user_cash = cash.str();
+    ImGui::Text("You have $%s", user_cash.c_str());
+    if (ImGui::TreeNode("view purchases")) {
+        view_purchase_history();
+        ImGui::TreePop();
+    }
     ImGui::SliderInt("Money", &i, 0, 100000, "%d", ImGuiSliderFlags_Logarithmic);
     std::stringstream ss;
     ss << i;
     s_i = ss.str();
     if (ImGui::Button("Add Money")) {
+        user.user_cash = i;
         std::string sql = "UPDATE User SET cash = " + s_i + " WHERE username = '" + globals.user_name + "';";
         insertData(dir, sql.c_str());
+        goto start;
     }
     if (ImGui::Button("Back")) {
         globals.ATM = false;
@@ -714,8 +720,21 @@ static int find_user_uid(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), find_user_uid_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
         sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+static int clearlogins(const char* s) {
+    std::string sql_query = "DELETE FROM Logins";
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
     }
     else
         return 0;
@@ -766,6 +785,9 @@ void ui::userPanel() {
     if (ImGui::Button("Job Selector")) {
         //TODO Job Selector
     }
+    if (ImGui::Button("Appareance")) {
+        globals.appareance = true;
+    }
     ImGui::SameLine();
     if (ImGui::Button("Log Out")) {
         //TODO Log out
@@ -785,6 +807,9 @@ void ui::userPanel() {
         
         }
         if (ImGui::TreeNode("Total logins")) {
+            if (ImGui::Button("Clear Logins")) {
+                clearlogins(dir);
+            }
             fetch_logins(dir);
             ImGui::TreePop();
         }
@@ -795,10 +820,47 @@ void ui::userPanel() {
         ImGui::Separator();
     //ImGui::Text("Welcome back, " + globals.user_name);
 }
-void r_register() {
+static int callback_fetch_username(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc; i++) {
+        if (i == 0)
+        {
+            MessageBeep(MB_ICONERROR);
+            ImGui::Text("user: %s is already a member", argv[0]);
+            failed = true;
 
-    std::string sql = "INSERT INTO User (username, password) VALUES ('" + user.u_name + "','" + user.u_pass + "');";
-    Register(dir, sql.c_str());
+        }
+        else
+        {
+            return 0;
+        }
+
+    }
+    return 0;
+}
+static int fetch_username(const char* s, std::string sql)
+{
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), callback_fetch_username, 0, &messageError);
+
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in selectData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return(0);
+}
+void r_register() {
+    std::string check_for_user = "SELECT username FROM user WHERE username = '" + user.u_name + "';";
+    fetch_username(dir, check_for_user);
+    if (failed != true) {
+        std::string sql = "INSERT INTO User (username, password) VALUES ('" + user.u_name + "','" + user.u_pass + "');";
+        Register(dir, sql.c_str());
+        MessageBeep(MB_OK);
+    }
 
 }
 static int fetch_logins_callback(void* NotUsed, int argc, char** argv, char** azColName) {
@@ -839,10 +901,18 @@ static int add_logins(const char* s) {
         std::cerr << "Error in insertData function." << std::endl;
         sqlite3_free(messageError);
         system("pause");
+        return 1;
     }
     else
         return 0;
 }
+void appareance() {
+    ImGui::Text("Coming soon.");
+    if (ImGui::Button("Back")) {
+        globals.appareance = false;
+    }
+}
+
 
 void l_login() {
 
@@ -866,57 +936,65 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (globals.messages != true) {
-            if (globals.modify_user != true) {
-                if (globals.user_list != true) {
-                    if (globals.inventory != true) {
-                        if (confirm_item_from_marketplace != true) {
-                            if (globals.ATM != true) {
-                                if (buy_item != true) {
-                                    if (globals.marketplace != true) {
-                                        if (globals.userpanel != true) {
-                                            ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                                            ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                                            if (ImGui::Button("Login")) {
-                                                user.u_name = globals.user_name;
-                                                user.u_pass = globals.pass_word;
+        if (globals.appareance != true) {
+            if (globals.messages != true) {
+                if (globals.modify_user != true) {
+                    if (globals.user_list != true) {
+                        if (globals.inventory != true) {
+                            if (confirm_item_from_marketplace != true) {
+                                if (globals.ATM != true) {
+                                    if (buy_item != true) {
+                                        if (globals.marketplace != true) {
+                                            if (globals.userpanel != true) {
+                                                ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                                                ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                                                if (ImGui::Button("Login")) {
+                                                    user.u_name = globals.user_name;
+                                                    user.u_pass = globals.pass_word;
+                                                    if (user.u_name.length() >= 1 && user.u_pass.length() >= 1) {
+                                                        l_login();
 
-                                                l_login();
+                                                    }
+                                                    else
+                                                        MessageBeep(MB_ICONERROR);
+                                                }
+                                                ImGui::SameLine();
+                                                if (ImGui::Button("Register")) {
+                                                    user.u_name = globals.user_name;
+                                                    user.u_pass = globals.pass_word;
+                                                    r_register();
+                                                }
                                             }
-                                            ImGui::SameLine();
-                                            if (ImGui::Button("Register")) {
-                                                user.u_name = globals.user_name;
-                                                user.u_pass = globals.pass_word;
-                                                r_register();
-                                            }
+                                            else
+                                                userPanel();
                                         }
                                         else
-                                            userPanel();
+                                            View_Marketplace();
                                     }
                                     else
-                                        View_Marketplace();
+                                        buy_item_from_marketplace();
                                 }
                                 else
-                                    buy_item_from_marketplace();
+                                    view_atm();
                             }
                             else
-                                view_atm();
+                                confirm_purchase();
                         }
                         else
-                            confirm_purchase();
+                            view_inventory();
+
                     }
                     else
-                        view_inventory();
-
+                        view_userlist();
                 }
                 else
-                    view_userlist();
+                    modify_user();
             }
             else
-                modify_user();
+                view_messages();
         }
         else
-            view_messages();
+            appareance();
     }
     ImGui::End();
 }
