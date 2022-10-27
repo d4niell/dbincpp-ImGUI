@@ -8,9 +8,12 @@
 #include <string>
 #include <fstream>
 #include <ctime>
+void confirm_purchase();
+
 static bool istrue = false;
 static int fetch_logins(const char* s);
 const char* dir = "c:\\Database.db";
+static int check_for_sum(const char* s);
 static bool buy_item = false;
 bool failed = false;
 static bool confirm_item_from_marketplace = false;
@@ -29,8 +32,8 @@ static int callback_login(void* NotUsed, int argc, char** argv, char** azColName
         }
         else
             MessageBeep(MB_ICONERROR);
-            return 0;
-       
+        return 0;
+
     }
     // printf("\n");
     return 0;
@@ -110,12 +113,12 @@ static int callback_username(void* NotUsed, int argc, char** argv, char** azColN
     static float Speed = 1.0f;
     if (tick || Alpha >= 255) {
         tick = true;
-        if (!(Alpha <= 0)) 
+        if (!(Alpha <= 0))
             Alpha -= Speed;
-            else if (Alpha <= 0) 
+        else if (Alpha <= 0)
             tick ^= 1;
-        
-        
+
+
     }
     else if (!tick || Alpha != 255)
     {
@@ -151,15 +154,37 @@ static int fetchuserUsername(const char* s)
         return 0;
 }
 static int callback_select_from_marketplace(void* NotUsed, int argc, char** argv, char** azColName) {
-    int i;
+    int i;    
     for (i = 0; i < argc - 1; i++) {
-        ImGui::Text("item:");
+        ImGui::Selectable(argv[0]);
+        
+       
+        /*ImGui::Text("item:");
         ImGui::SameLine();
-        ImGui::Text(argv[0]);
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
         ImGui::SameLine();
         ImGui::Text("price:");
         ImGui::SameLine();
-        ImGui::Text(argv[1]);
+        ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
+    */
+    }
+    if (ImGui::BeginPopupContextItem()) {
+        ImGui::Text("this item costs $%s", argv[1]);
+        if (ImGui::Button("buy")) {
+            std::string abc = argv[1];
+            market.listed_item_price = stoi(abc);
+            market.listed_item_name = argv[0];
+            confirm_item_from_marketplace = true;
+            //  check_for_sum(dir);
+
+            ImGui::CloseCurrentPopup();
+
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close"))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+
     }
     return 0;
 }
@@ -170,8 +195,7 @@ static int select_from_marketplace(const char* s)
     char* messageError;
     int exit = sqlite3_open(s, &DB);
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
-    exit = sqlite3_exec(DB, sql.c_str(), callback_select_from_marketplace, 0, &messageError);
-
+    exit = sqlite3_exec(DB, sql.c_str(), callback_select_from_marketplace, NULL, &messageError);
     if (exit != SQLITE_OK) {
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
@@ -216,53 +240,25 @@ static int fetchuserCASH(const char* s)
 std::string s_i;
 static int insertData(const char* s, std::string sql)
 {
-    std::ofstream data;
-    data.open("data.txt", std::ios::app);
+    std::ofstream myfile;
+    myfile.open("database errors.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here */
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
-    if (exit != SQLITE_OK) {
+
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
         std::cerr << "Error in insertData function." << std::endl;
-        data << "\n\n" << s_i << ":" << globals.user_name;
-        data.close();
-        sqlite3_free(messageError);
+       
+        myfile << "\n insertdata error >>" << messageError;
+        myfile.close();
+        MessageBeep(MB_ICONERROR);
+        system("pause");
     }
     else
         MessageBeep(MB_OK);
-        return 0;
-}
-static int check_for_sum_callback(void* NotUsed, int argc, char** argv, char** azColName) {
-    int i;
-    for (i = 0; i < argc - 1; i++) {
-        ImGui::Text("this item is listed by: %s", argv[0]);
-        ImGui::SameLine();
-        ImGui::Text("this item's name is: %s", argv[1]);
-        ImGui::SameLine();
-        ImGui::Text("this item's price is: %s", argv[2]);
-        ImGui::SameLine();
-        std::string abc = argv[2];
-        market.listed_item_price = stoi(abc);
-        market.listed_item_name = argv[1];
-    }
     return 0;
-
-}
-static int check_for_sum(const char* s) {
-    std::string item = globals.item;
-    std::string sql_query = "SELECT userID, itemName, price FROM Marketplace WHERE itemName = '" + item + "';";
-    sqlite3* db;
-    char* messageError;
-    int exit = sqlite3_open(s, &db);
-    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here */
-    exit = sqlite3_exec(db, sql_query.c_str(), check_for_sum_callback, 0, &messageError);
-    if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
-        sqlite3_free(messageError);
-    }
-    else
-        return 0;
 }
 static int selectData(const char* s, std::string sql)
 {
@@ -275,49 +271,116 @@ static int selectData(const char* s, std::string sql)
     if (exit != SQLITE_OK) {
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return 1;
     }
     else
         return 0;
 }
+
+static int add_inventory(const char* s, std::string sql)
+{
+    int ms = 1000;
+ 
+    std::ofstream return_error;
+    return_error.open("database_errors.txt", std::ios::app);
+    sqlite3* DB;
+
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
+        return_error << "\n >> " << messageError;
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return_error.close();
+    }
+
+    else
+        return 0;
+}
+static int update_user_inventory(const char* s, std::string sql)
+{
+    std::ofstream return_error;
+    return_error.open("database_errors.txt", std::ios::app);
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    sqlite3_busy_timeout(DB, 1000);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+    sqlite3_busy_timeout(DB, 1000);
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
+        return_error << "\n >> " << messageError;
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return_error.close();
+        return 1;
+    }
+    else
+        return 0;
+}
+static int delete_from_marketplace(const char* s, std::string sql)
+{
+    std::ofstream return_error;
+    return_error.open("database_errors.txt", std::ios::app);
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
+        return_error << "\n >> " << messageError;
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return_error.close();
+        return 1;
+    }
+    else
+        return 0;
+}
+void messagebox(const char message[100]) {
+   if (ImGui::Begin("Message From dbincpp", 0, ui::window_flags))
+        ImGui::Text(message);
+   ImGui::End();
+
+}
 void confirm_purchase() {
+    std::string message = "you don't have enough funds";
     std::ostringstream str1;
-        if (user.user_cash >= market.listed_item_price) {
-            std::ofstream myfile;
-            myfile.open("c://" + user.u_name + "_purchaseHis.txt", std::ios::app);
-            std::string add_inv = "INSERT INTO Inventory (userID, item, amount) VALUES (" + user.user_uid + ", '" + market.listed_item_name + "', 1)";
-            insertData(dir, add_inv);
-            std::ostringstream str1;
-            int pay_amount = user.user_cash - market.listed_item_price;
-            str1 << pay_amount; //stores pay_amount into str1
-            std::string i_pay_amount = str1.str(); //converts pay_amount which is stored in str1 into i_pay_amount (string)
-            myfile << "\n" << "money left: " << i_pay_amount << " item price: " << market.listed_item_price << " item name: " << market.listed_item_name;
-            myfile.close();
-            std::string query = "UPDATE User SET cash = " + i_pay_amount + " WHERE id =" + user.user_uid + ";";
-            insertData(dir, query);
-            std::string delete_item = "DELETE FROM Marketplace WHERE itemName = '" + market.listed_item_name + "';";
-            selectData(dir, delete_item);
-
-            confirm_item_from_marketplace = false;
-            buy_item = false;
-        }   
-
-
+    if (user.user_cash >= market.listed_item_price) {
+        std::ofstream myfile;
+        myfile.open("c://" + user.u_name + "_purchaseHis.txt", std::ios::app);
+        std::string add_inv = "INSERT INTO Inventory (userID, item, amount) VALUES (" + user.user_uid + ", '" + market.listed_item_name + "', 1)";
+        add_inventory(dir, add_inv);;
+        std::ostringstream str1;
+        int pay_amount = user.user_cash - market.listed_item_price;
+        str1 << pay_amount; //stores pay_amount into str1
+        std::string i_pay_amount = str1.str(); //converts pay_amount which is stored in str1 into i_pay_amount (string)
+        myfile << "\n" << "my uid: " << user.user_uid << "money left: " << i_pay_amount << " item price: " << market.listed_item_price << " item name: " << market.listed_item_name;
+        myfile.close();
+        std::string query = "UPDATE User SET cash = " + i_pay_amount + " WHERE id =" + user.user_uid + ";";
+        update_user_inventory(dir, query);
+        std::string delete_item = "DELETE FROM Marketplace WHERE itemName = '" + market.listed_item_name + "';";
+        delete_from_marketplace(dir, delete_item);
+        confirm_item_from_marketplace = false;
+        buy_item = false;
+    }
+    else
+       
+       // messagebox(message.c_str());
 }
 
 
-void buy_item_from_marketplace() {
+void buy_item_from_marketplace() { // buy item tab
 
     select_from_marketplace(dir);
-
-    ImGui::InputText("Item name", globals.item, IM_ARRAYSIZE(globals.item));
-    if (ImGui::Button("Buy Item")) {
-        confirm_item_from_marketplace = true;
-        check_for_sum(dir);
-        if (ImGui::Button("Back")) {
-            confirm_item_from_marketplace = false;
-            buy_item = false;
-        }
-        confirm_purchase();
+    ImGui::SameLine();
+    if (ImGui::Button("Back")) {
+        confirm_item_from_marketplace = false;
+        buy_item = false;
     }
 
 }
@@ -325,12 +388,11 @@ void View_Marketplace() {
     if (ImGui::TreeNode("Listed Items")) {
         select_from_marketplace(dir);
         ImGui::TreePop();
-        if (ImGui::Button("Buy Item")) {
-            buy_item = true;
-        }
     }
     if (ImGui::TreeNode("Add Item")) {
+        ImGui::PushItemWidth(150);
         ImGui::InputText("Item name", globals.user_item, IM_ARRAYSIZE(globals.user_item));
+        ImGui::PushItemWidth(150);
         ImGui::InputText("Item Price", globals.user_item_price, IM_ARRAYSIZE(globals.user_item_price));
         user.marketplace_item_name = globals.user_item;
         user.marketplace_item_price = globals.user_item_price;
@@ -410,7 +472,7 @@ static int createTable(const char* s) {
                     if (exit != SQLITE_OK) {
                         sqlite3_free(Error);
                     }
-                    
+
 
                 }
 
@@ -432,13 +494,13 @@ void view_purchase_history() {
         ImGui::Text("Something went wrong");
     }
     else
-        
-    while (getline(myfile, line)) {
-        ImGui::Text(line.c_str());
-    }
+
+        while (getline(myfile, line)) {
+            ImGui::Text(line.c_str());
+        }
 }
 void view_atm() {
-    start:
+start:
     static int i;
     std::stringstream cash;
     cash << user.user_cash;
@@ -458,6 +520,7 @@ void view_atm() {
         insertData(dir, sql.c_str());
         goto start;
     }
+    ImGui::SameLine();
     if (ImGui::Button("Back")) {
         globals.ATM = false;
     }
@@ -551,9 +614,9 @@ static int userlist_callback(void* NotUsed, int argc, char** argv, char** azColN
         ImGui::SameLine();
         ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[3]);
         ImGui::SameLine();
-        ImGui::Separator();   
+        ImGui::Separator();
     }
-    
+
     ImGui::Text("Modify ");
     ImGui::SameLine();
     if (ImGui::Button(argv[1])) {
@@ -605,7 +668,7 @@ static int find_wanted_user(const char* s) {
     else
         return 0;
 }
-static int set_new_values(const char* s,std::string sql) {
+static int set_new_values(const char* s, std::string sql) {
     sqlite3* db;
     char* messageError;
     int exit = sqlite3_open(s, &db);
@@ -621,6 +684,7 @@ void modify_user() {
     find_wanted_user(dir);
     ImGui::Separator();
     if (ImGui::TreeNode("Edit Username")) {
+        ImGui::PushItemWidth(150);
         ImGui::InputText("new username", globals.modify_username, IM_ARRAYSIZE(globals.modify_username));
         if (ImGui::Button("send")) {
             std::string newname = globals.modify_username;
@@ -631,6 +695,7 @@ void modify_user() {
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Edit password")) {
+        ImGui::PushItemWidth(150);
         ImGui::InputText("new password", globals.modify_password, IM_ARRAYSIZE(globals.modify_password));
         if (ImGui::Button("send")) {
             std::string newpass = globals.modify_password;
@@ -641,13 +706,14 @@ void modify_user() {
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Edit cash")) {
+        ImGui::PushItemWidth(150);
         ImGui::InputText("new amount", globals.modify_cash, IM_ARRAYSIZE(globals.modify_cash));
         if (ImGui::Button("send")) {
             std::string newpass = globals.modify_cash;
             std::string sql = "UPDATE User SET cash = '" + newpass + "' WHERE username = '" + user.user_modify_name + "';";
             set_new_values(dir, sql);
             find_wanted_user(dir);
-            
+
         }
         ImGui::TreePop();
     }
@@ -746,12 +812,14 @@ void view_messages() {
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Send Message")) {
+        ImGui::PushItemWidth(150);
         ImGui::InputText("Username", globals.user_message_name, IM_ARRAYSIZE(globals.user_message_name));
+        ImGui::PushItemWidth(150);
         ImGui::InputText("Message", globals.user_message, IM_ARRAYSIZE(globals.user_message));
         if (ImGui::Button("Send")) {
             find_user_uid(dir);
             std::string message = globals.user_message;
-            std::string send_message = "INSERT INTO Messages (senderID, sender_name, receiverID, message) VALUES (" + user.user_uid + ",'" + user.s_username + "'," + user.s_uid + ",'" + message  + "');";
+            std::string send_message = "INSERT INTO Messages (senderID, sender_name, receiverID, message) VALUES (" + user.user_uid + ",'" + user.s_username + "'," + user.s_uid + ",'" + message + "');";
             insertData(dir, send_message);
         }
         ImGui::TreePop();
@@ -800,11 +868,13 @@ void ui::userPanel() {
     if (user.user_uid == "1") {
         ImGui::Separator();
         ImGui::TextColored(ImColor(255, 0, 255), "Admin Tools");
+        
         if (ImGui::Button("User List")) {
             globals.user_list = true;
         }
+        ImGui::SameLine();
         if (ImGui::Button("Remove Item(s)")) {
-        
+
         }
         if (ImGui::TreeNode("Total logins")) {
             if (ImGui::Button("Clear Logins")) {
@@ -918,8 +988,8 @@ void l_login() {
 
     std::string sql = "SELECT username, password FROM User WHERE username = '" + user.u_name + "' AND password = '" + user.u_pass + "';";
     fetch_credentials(dir, sql.c_str());
-  // sql = "SELECT logins FROM Logins";
-     add_logins(dir);
+    // sql = "SELECT logins FROM Logins";
+    add_logins(dir);
     ui::userPanel();
 
 }
@@ -946,8 +1016,11 @@ void ui::render() {
                                     if (buy_item != true) {
                                         if (globals.marketplace != true) {
                                             if (globals.userpanel != true) {
+                                                ImGui::PushItemWidth(150);
                                                 ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                                                ImGui::PushItemWidth(150);
                                                 ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+
                                                 if (ImGui::Button("Login")) {
                                                     user.u_name = globals.user_name;
                                                     user.u_pass = globals.pass_word;

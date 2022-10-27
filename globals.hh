@@ -15,7 +15,7 @@ public:
 	bool log_out = false;
 	char user_item[100];
 	char user_item_price[100];
-	char item[100];
+	std::string item;
 	bool inventory = false;
 	bool user_list = false;
 	char modify_username[100];
@@ -24,6 +24,7 @@ public:
 	char modify_cash[100];
 	bool modify_user = false;
 	char user_message[100];
+	bool messageActive = false;
 	char user_message_name[100];
 };
 struct {

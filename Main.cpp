@@ -30,14 +30,11 @@ int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = ImGui::GetStyle().Colors;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
-        style.WindowRounding = 0.2f;
-        ImGui::GetStyle().FrameBorderSize = 1.5f;
-        ImGui::GetStyle().FrameRounding = 2.0f;
-        ImGui::GetStyle().Alpha = 0.8f;
-        ImGui::GetStyle().ItemSpacing = ImVec2(5,5);
-        style.Colors[ImGuiCol_Border] = ImVec4(255,0,0,255);
+
+
 
     }
     // Setup Platform/Renderer backends
@@ -90,6 +87,16 @@ int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
+            style.WindowRounding = 0.9f;
+            ImGui::GetStyle().FrameBorderSize = 1.5f;
+            ImGui::GetStyle().FrameRounding = 3.0f;
+            ImGui::GetStyle().Alpha = 0.8f;
+            ImGui::GetStyle().ItemSpacing = ImVec2(5, 5);
+            colors[ImGuiCol_WindowBg] = ImVec4(0.05f, 0.05f, 0.05f, 255.0f);
+            colors[ImGuiCol_TitleBg] = ImVec4(0.84f, 0.03f, 0.54f, 255.0f);
+            colors[ImGuiCol_Button] = ImVec4(1.30f, 0.09f, 0.31f,255.0f);
+            colors[ImGuiCol_ButtonHovered] = ImVec4(0.51f, 0.49f, 0.49f, 255.0f);
+            ImGui::GetStyle().WindowTitleAlign = ImVec2(0.5f, 0.5f);
         }
 
         HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
