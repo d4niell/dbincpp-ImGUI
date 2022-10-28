@@ -52,6 +52,7 @@ struct {
 public:
 	int listed_item_price;
 	std::string listed_item_name;
-
+	std::string listed_item_owner;
+	int owner_money;
 }market;
 inline c_globals globals;

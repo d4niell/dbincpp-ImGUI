@@ -170,7 +170,7 @@ static int fetchuserUsername(const char* s)
 }
 static int callback_select_from_marketplace(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;    
-    for (i = 0; i < argc - 1; i++) {
+    for (i = 0; i < argc - 2; i++) {
         ImGui::Selectable(argv[0]);
         
        
@@ -189,7 +189,9 @@ static int callback_select_from_marketplace(void* NotUsed, int argc, char** argv
             std::string abc = argv[1];
             market.listed_item_price = stoi(abc);
             market.listed_item_name = argv[0];
+            market.listed_item_owner = argv[2];
             confirm_item_from_marketplace = true;
+ 
             //  check_for_sum(dir);
             ImGui::CloseCurrentPopup();
 
@@ -204,7 +206,7 @@ static int callback_select_from_marketplace(void* NotUsed, int argc, char** argv
 }
 static int select_from_marketplace(const char* s)
 {
-    std::string sql = "SELECT itemName, price FROM Marketplace;";
+    std::string sql = "SELECT itemName, price, userID FROM Marketplace;";
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -379,6 +381,55 @@ static int delete_from_marketplace(const char* s, std::string sql)
     else
         return 0;
 }
+static int send_money_to_owner(const char* s, std::string sql)
+{
+    std::ofstream return_error;
+    return_error.open("database_errors.txt", std::ios::app);
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
+        return_error << "\n >> " << messageError;
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return_error.close();
+        return 1;
+    }
+    else
+        return 0;
+}
+static int fetch_owner_money_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc; i++) {
+        std::string temp = argv[0];
+        market.owner_money = stoi(temp);      
+    }
+    return 0;
+}
+static int fetch_owner_money(const char* s, std::string sql)
+{
+    std::ofstream return_error;
+    return_error.open("database_errors.txt", std::ios::app);
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), fetch_owner_money_callback, 0, &messageError);
+
+    if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
+        return_error << "\n >> " << messageError;
+        sqlite3_free(messageError);
+        MessageBeep(MB_ICONERROR);
+        return_error.close();
+        return 1;
+    }
+    else
+        MessageBeep(MB_OK);
+        return 0;
+}
 void messagebox(const char message[100]) {
    if (ImGui::Begin("Message From dbincpp", 0, ui::window_flags))
         ImGui::Text(message);
@@ -399,11 +450,23 @@ void confirm_purchase() {
         int pay_amount = user.user_cash - market.listed_item_price;
         str1 << pay_amount; //stores pay_amount into str1
         std::string i_pay_amount = str1.str(); //converts pay_amount which is stored in str1 into i_pay_amount (string)
-        myfile << "\nmoney left: " << i_pay_amount << " item price: " << market.listed_item_price << " item name: " << market.listed_item_name;
+        time_t now = time(0);
+        char* dt = ctime(&now);
+        myfile << "\n" << "date:" << dt << "> money had : " << user.user_cash << "\n> money left : " << i_pay_amount << "\n> item price : " << market.listed_item_price << "\n> item name : " << market.listed_item_name << "\n\n";
         myfile.close();
+        std::ofstream data;
+
         std::string query = "UPDATE User SET cash = " + i_pay_amount + " WHERE id =" + user.user_uid + ";";
         update_user_inventory(dir, query);
         std::string delete_item = "DELETE FROM Marketplace WHERE itemName = '" + market.listed_item_name + "';";
+        std::string fetch_cash = "SELECT cash FROM User WHERE id = " + market.listed_item_owner + ";";
+        fetch_owner_money(dir, fetch_cash);
+        int owner_new_money = market.owner_money + market.listed_item_price;
+        std::ostringstream str2;
+        str2 << owner_new_money;
+        std::string owner_amount = str2.str();
+        query = "UPDATE User SET cash = " + owner_amount + " WHERE id = " + market.listed_item_owner + ";";
+        update_user_inventory(dir, query);
         delete_from_marketplace(dir, delete_item);
         confirm_item_from_marketplace = false;
         buy_item = false;
@@ -541,17 +604,20 @@ start:
         view_purchase_history();
         ImGui::TreePop();
     }
-    ImGui::SliderInt("Money", &i, 0, 100000, "%d", ImGuiSliderFlags_Logarithmic);
-    std::stringstream ss;
-    ss << i;
-    s_i = ss.str();
-    if (ImGui::Button("Add Money")) {
-        user.user_cash = i;
-        std::string sql = "UPDATE User SET cash = " + s_i + " WHERE username = '" + globals.user_name + "';";
-        insertData(dir, sql.c_str());
-        goto start;
+    if (user.user_uid == "1") {
+        ImGui::SliderInt("Money", &i, 0, 100000, "%d", ImGuiSliderFlags_Logarithmic);
+        std::stringstream ss;
+        ss << i;
+        s_i = ss.str();
+        if (ImGui::Button("Add Money")) {
+            user.user_cash = i;
+            std::string sql = "UPDATE User SET cash = " + s_i + " WHERE username = '" + globals.user_name + "';";
+            insertData(dir, sql.c_str());
+            goto start;
+        }
+        ImGui::SameLine();
     }
-    ImGui::SameLine();
+    
     if (ImGui::Button("Back")) {
         globals.ATM = false;
     }
