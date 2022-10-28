@@ -25,7 +25,7 @@ public:
 	bool modify_user = false;
 	char user_message[100];
 	bool messageActive = false;
-	char user_message_name[100];
+	std::string user_message_name;
 };
 struct {
 public:

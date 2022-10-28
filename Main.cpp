@@ -43,7 +43,7 @@ int APIENTRY WinMain(HINSTANCE, HINSTANCE, LPSTR, int)
 
 
 
-    ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Comic.ttf", 16.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+    ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\Calibri.ttf", 14.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     IM_ASSERT(font != NULL);
 
 
