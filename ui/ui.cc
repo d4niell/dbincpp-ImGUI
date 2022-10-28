@@ -20,6 +20,26 @@ bool send_message = false;
 bool failed = false;
 void TextCentered(std::string text);
 static bool confirm_item_from_marketplace = false;
+void DBlog(std::string prefix, std::string message) {
+    if (user.user_uid == "1") {
+        std::ofstream databaseLogs;
+        databaseLogs.open("c://database_errors.txt", std::ios::app);
+        if (databaseLogs.is_open()) {
+            databaseLogs << "\n> error occured in [" << prefix << "] >> " << message << ";";
+            databaseLogs.close();
+        }
+    }
+}
+void log(std::string message) {
+    if (user.user_uid == "1") {
+        std::ofstream databaseLogs;
+        databaseLogs.open("c://dbincpp_logs.txt", std::ios::app);
+        if (databaseLogs.is_open()) {
+            databaseLogs << "\ndbincpp >> [" << message << "]";
+            databaseLogs.close();
+        }
+    }
+}
 static int callback_login(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc; i++) {
@@ -62,7 +82,7 @@ static int fetch_credentials(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), callback_login, 0, &messageError);
 
     if (exit != SQLITE_OK) {
-        // std::cerr << "Error in selectData function." << std::endl;
+        DBlog("fetch_credentials", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -77,6 +97,7 @@ static int Register(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
 
     if (exit != SQLITE_OK) {
+        DBlog("Register", messageError);
         sqlite3_free(messageError);
         return 1;
     }
@@ -104,6 +125,7 @@ static int fetchuserUID(const char* s)
     exit = sqlite3_exec(DB, sql.c_str(), callback_uid, 0, &messageError);
 
     if (exit != SQLITE_OK) {
+        DBlog("fetchuserUID", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -162,6 +184,7 @@ static int fetchuserUsername(const char* s)
     exit = sqlite3_exec(DB, sql.c_str(), callback_username, 0, &messageError);
 
     if (exit != SQLITE_OK) {
+        DBlog("fetchuserUsername", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -213,6 +236,7 @@ static int select_from_marketplace(const char* s)
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
     exit = sqlite3_exec(DB, sql.c_str(), callback_select_from_marketplace, NULL, &messageError);
     if (exit != SQLITE_OK) {
+        DBlog("select_from_marketplace", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -230,12 +254,14 @@ static int insert_into_marketplace(const char* s)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
     sql = "DELETE FROM Inventory WHERE item = '" + user.marketplace_item_name + "';";
     if (exit != SQLITE_OK) {
+        DBlog("insert_into_marketplace", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
     else
         exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
+        DBlog("insert_into_marketplace", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -253,6 +279,8 @@ static int admin_insert_into_marketplace(const char* s)
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
+        MessageBeep(MB_ICONERROR);
+        DBlog("admin_insert_into_marketplace", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -271,6 +299,7 @@ static int fetchuserCASH(const char* s)
     exit = sqlite3_exec(DB, sql.c_str(), callback_CASH, 0, &messageError);
 
     if (exit != SQLITE_OK) {
+        DBlog("fetchuserCASH", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -289,10 +318,7 @@ static int insertData(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
 
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        std::cerr << "Error in insertData function." << std::endl;
-       
-        myfile << "\n insertdata error >>" << messageError;
-        myfile.close();
+        DBlog("insertData", messageError);
         MessageBeep(MB_ICONERROR);
         system("pause");
     }
@@ -309,7 +335,7 @@ static int selectData(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
 
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in selectData function." << std::endl;
+        DBlog("selectData", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
         return 1;
@@ -320,10 +346,6 @@ static int selectData(const char* s, std::string sql)
 
 static int add_inventory(const char* s, std::string sql)
 {
-    int ms = 1000;
- 
-    std::ofstream return_error;
-    return_error.open("database_errors.txt", std::ios::app);
     sqlite3* DB;
 
     char* messageError;
@@ -331,10 +353,10 @@ static int add_inventory(const char* s, std::string sql)
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        return_error << "\n add_inventory >> " << messageError;
+        DBlog("add_inventory", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
-        return_error.close();
+
     }
 
     else
@@ -342,20 +364,15 @@ static int add_inventory(const char* s, std::string sql)
 }
 static int update_user_inventory(const char* s, std::string sql)
 {
-    std::ofstream return_error;
-    return_error.open("database_errors.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
-    sqlite3_busy_timeout(DB, 1000);
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
-    sqlite3_busy_timeout(DB, 1000);
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        return_error << "\n update_user_inventory >> " << messageError;
+        DBlog("update_user_inventory", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
-        return_error.close();
         return 1;
     }
     else
@@ -363,8 +380,6 @@ static int update_user_inventory(const char* s, std::string sql)
 }
 static int delete_from_marketplace(const char* s, std::string sql)
 {
-    std::ofstream return_error;
-    return_error.open("database_errors.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -372,10 +387,9 @@ static int delete_from_marketplace(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
 
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        return_error << "\n >> " << messageError;
+        DBlog("delete_from_marketplace", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
-        return_error.close();
         return 1;
     }
     else
@@ -383,8 +397,6 @@ static int delete_from_marketplace(const char* s, std::string sql)
 }
 static int send_money_to_owner(const char* s, std::string sql)
 {
-    std::ofstream return_error;
-    return_error.open("database_errors.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -392,10 +404,9 @@ static int send_money_to_owner(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
 
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        return_error << "\n >> " << messageError;
+        DBlog("send_money_to_owner", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
-        return_error.close();
         return 1;
     }
     else
@@ -411,8 +422,6 @@ static int fetch_owner_money_callback(void* NotUsed, int argc, char** argv, char
 }
 static int fetch_owner_money(const char* s, std::string sql)
 {
-    std::ofstream return_error;
-    return_error.open("database_errors.txt", std::ios::app);
     sqlite3* DB;
     char* messageError;
     int exit = sqlite3_open(s, &DB);
@@ -420,23 +429,30 @@ static int fetch_owner_money(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), fetch_owner_money_callback, 0, &messageError);
 
     if (exit != SQLITE_OK || exit == SQLITE_BUSY) {
-        return_error << "\n >> " << messageError;
+        DBlog("fetch_owner_money", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
-        return_error.close();
         return 1;
     }
     else
         MessageBeep(MB_OK);
         return 0;
 }
-void messagebox(const char message[100]) {
+void messagebox(int type, const char message[100]) {
+    MessageBeep(MB_ICONWARNING);
    if (ImGui::Begin("Message From dbincpp", 0, ui::window_flags))
         ImGui::Text(message);
+   switch (type) {
+   case 1:
+       if (ImGui::Button("ok")) {
+           confirm_item_from_marketplace = false;
+           buy_item = false;
+       }
+       break;
+   }
    ImGui::End();
-
 }
-bool no_funds = true;
+
 void confirm_purchase() {
 
     std::string message = "you don't have enough funds";
@@ -455,7 +471,6 @@ void confirm_purchase() {
         myfile << "\n" << "date:" << dt << "> money had : " << user.user_cash << "\n> money left : " << i_pay_amount << "\n> item price : " << market.listed_item_price << "\n> item name : " << market.listed_item_name << "\n\n";
         myfile.close();
         std::ofstream data;
-
         std::string query = "UPDATE User SET cash = " + i_pay_amount + " WHERE id =" + user.user_uid + ";";
         update_user_inventory(dir, query);
         std::string delete_item = "DELETE FROM Marketplace WHERE itemName = '" + market.listed_item_name + "';";
@@ -472,15 +487,7 @@ void confirm_purchase() {
         buy_item = false;
     }
     else
-
-        if (no_funds) {
-            ImGui::Begin("message");
-            ImGui::Text("You have insufficient funds (im just testing this lol) restart the program");
-            if (ImGui::Button("ok")) 
-                no_funds = false;
-            
-            ImGui::End();
-        }
+        messagebox(1,"you have insufficient funds");
 }
 
 
@@ -515,6 +522,7 @@ static int createTable(const char* s) {
     exit = sqlite3_open(s, &db);
     exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
     if (exit != SQLITE_OK) {
+        DBlog("User table", Error);
         sqlite3_free(Error);
     }
     else {
@@ -526,6 +534,7 @@ static int createTable(const char* s) {
         exit = sqlite3_open(s, &db);
         exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
         if (exit != SQLITE_OK) {
+            DBlog("Marketplace table", Error);
             sqlite3_free(Error);
         }
         else {
@@ -538,6 +547,7 @@ static int createTable(const char* s) {
             exit = sqlite3_open(s, &db);
             exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
             if (exit != SQLITE_OK) {
+                DBlog("Inventory table", Error);
                 sqlite3_free(Error);
             }
             else {
@@ -554,6 +564,7 @@ static int createTable(const char* s) {
                 exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
 
                 if (exit != SQLITE_OK) {
+                    DBlog("Messages table", Error);
                     sqlite3_free(Error);
                 }
                 else {
@@ -564,6 +575,7 @@ static int createTable(const char* s) {
                     exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
 
                     if (exit != SQLITE_OK) {
+                        DBlog("Logins table", Error);
                         sqlite3_free(Error);
                     }
 
@@ -687,7 +699,7 @@ static int check_for_inventory_items(const char* s) {
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here */
     exit = sqlite3_exec(db, sql_query.c_str(), check_for_inventory_items_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("check_for_inventory_items", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -717,7 +729,7 @@ static int check_for_listed_items(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), check_for_listed_items_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("check_for_listed_items", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -792,7 +804,7 @@ static int find_wanted_user(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), find_wanted_usercallback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("find_wanted_user", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -804,7 +816,7 @@ static int set_new_values(const char* s, std::string sql) {
     int exit = sqlite3_open(s, &db);
     exit = sqlite3_exec(db, sql.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("set_new_values", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -859,7 +871,7 @@ static int userlist(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), userlist_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("userlist", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -899,7 +911,7 @@ static int fetch_messages(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), fetch_messages_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("fetch_messages", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -923,6 +935,7 @@ static int find_user_uid(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), find_user_uid_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
+        DBlog("find_user_uid", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -936,6 +949,7 @@ static int clearlogins(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
+        DBlog("clearlogins", messageError);
         sqlite3_free(messageError);
         MessageBeep(MB_ICONERROR);
     }
@@ -982,6 +996,7 @@ static int get_users(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), get_users_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
+        DBlog("get_users", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -1034,12 +1049,43 @@ void roulette() { // beta
         MessageBeep(MB_OK);
         std::string sql = "UPDATE User SET cash =" + covert_1 + " WHERE username = '" + user.u_name + "';";
         insertData(dir, sql);
+        log("user won " + covert_1);
         goto start;
     }
     
     if (ImGui::Button("close")) {
         globals.roulette = false;
     }
+}
+void fetch_DBlogs() {
+    std::fstream database_logs;
+    std::string line;
+    int number = 0;
+    database_logs.open("c://database_errors.txt");
+    if (!database_logs.is_open())
+    {
+        ImGui::Text("Something bad happened");
+    }
+    else
+    while (getline(database_logs, line)) {
+        ImGui::Text("(%d) %s", number, line.c_str());
+        number++;
+    }
+}
+void fetch_logs() {
+    std::fstream logs;
+    std::string line;
+    int number = 0;
+    logs.open("c://dbincpp_logs.txt");
+    if (!logs.is_open())
+    {
+        ImGui::Text("Something bad happened");
+    }
+    else
+        while (getline(logs, line)) {
+            ImGui::Text("(%d) %s", number, line.c_str());
+            number++;
+        }
 }
 void ui::userPanel() {
 
@@ -1101,6 +1147,22 @@ void ui::userPanel() {
             fetch_logins(dir);
             ImGui::TreePop();
         }
+        ImGui::Separator();
+        ImGui::Text("for debugging");
+        if (ImGui::TreeNode("view logs")) {
+            if (ImGui::Button("Clear Logs")) {
+                remove("c://dbincpp_logs.txt");
+            }
+            fetch_logs();
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("view database logs")) {
+            if (ImGui::Button("Clear Logs")) {
+                remove("c://database_errors.txt");
+            }
+            fetch_DBlogs();
+            ImGui::TreePop();
+        }
 
 
 
@@ -1136,6 +1198,7 @@ static int fetch_username(const char* s, std::string sql)
     exit = sqlite3_exec(DB, sql.c_str(), callback_fetch_username, 0, &messageError);
 
     if (exit != SQLITE_OK) {
+        DBlog("fetch_username", messageError);
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
@@ -1171,7 +1234,7 @@ static int fetch_logins(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), fetch_logins_callback, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("fetch_logins", messageError);
         sqlite3_free(messageError);
     }
     else
@@ -1187,7 +1250,7 @@ static int add_logins(const char* s) {
 
     exit = sqlite3_exec(db, sql_query.c_str(), NULL, 0, &messageError);
     if (exit != SQLITE_OK) {
-        std::cerr << "Error in insertData function." << std::endl;
+        DBlog("add_logins", messageError);
         sqlite3_free(messageError);
         system("pause");
         return 1;
