@@ -64,11 +64,11 @@
  ### marketplace
  
  ![marketplace](https://i.imgur.com/tHoXIYJ.png)
- ![marketplace](https://i.imgur.com/ST1azJv.png)
  
  ### inventory
  
  ![inventory](https://i.imgur.com/VDN24zr.png)
+ ![inventory](https://i.imgur.com/UHqY59i.png)
  
  ### atm
  
