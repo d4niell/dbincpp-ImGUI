@@ -26,6 +26,7 @@ public:
 	char user_message[100];
 	bool messageActive = false;
 	std::string user_message_name;
+	bool roulette = false;
 };
 struct {
 public:
