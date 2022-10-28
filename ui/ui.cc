@@ -885,13 +885,20 @@ void view_messages() {
 }
 
 void roulette() { // beta
+
     std::ostringstream convert;
     bool dead = false;
     TextCentered("russian roulette");
+    start:
+    std::ostringstream user_cash;
+    user_cash << user.user_cash;
+    std::string user_cash1 = user_cash.str();
+    ImGui::Text("you have $%s", user_cash1.c_str());
     if (ImGui::Button("try")) {
         int pay_amount = rand() % 10 + 50;
         int random = rand() % 6 + 1;
-        if (random == 5) {
+        int hit = rand() % 6 + 1;
+        if (random == hit) {
 
             MessageBeep(MB_ICONERROR);
             pay_amount = user.user_cash - pay_amount;
@@ -899,14 +906,17 @@ void roulette() { // beta
             std::string covert_1 = convert.str();
             std::string sql = "UPDATE User SET cash =" + covert_1 + " WHERE username = '" + user.u_name + "';";
             insertData(dir, sql);
+            goto start;
         }
         else
+            fetchuserCASH(dir);
         pay_amount = user.user_cash + pay_amount;
         convert << pay_amount;
         std::string covert_1 = convert.str();
         MessageBeep(MB_OK);
         std::string sql = "UPDATE User SET cash =" + covert_1 + " WHERE username = '" + user.u_name + "';";
         insertData(dir, sql);
+        goto start;
     }
     
     if (ImGui::Button("close")) {
