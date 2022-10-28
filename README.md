@@ -17,6 +17,7 @@
   
   > generate item(s) (marketplace)
   
+  > logs
   
 - marketplace 
 
@@ -62,6 +63,7 @@
   ![admin_tools](https://i.imgur.com/DZKuyKR.png)
   ![admin_tools](https://i.imgur.com/iKrZQFF.png)
   ![admin_tools](https://i.imgur.com/UuAYUlA.png)
+  ![admin_tools](https://i.imgur.com/AT3sfMV.png)
   
  ### marketplace
  
