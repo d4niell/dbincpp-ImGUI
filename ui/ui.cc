@@ -226,13 +226,37 @@ static int insert_into_marketplace(const char* s)
     int exit = sqlite3_open(s, &DB);
     /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
     exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
-
+    sql = "DELETE FROM Inventory WHERE item = '" + user.marketplace_item_name + "';";
     if (exit != SQLITE_OK) {
         std::cerr << "Error in selectData function." << std::endl;
         sqlite3_free(messageError);
     }
     else
+        exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in selectData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+
+        MessageBeep(MB_OK);
         return 0;
+}
+static int admin_insert_into_marketplace(const char* s)
+{
+    std::string sql = "INSERT INTO Marketplace (userID, itemName, price) VALUES (" + user.user_uid + ", '" + user.marketplace_item_name + "', " + user.marketplace_item_price + "); ";
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        std::cerr << "Error in selectData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        MessageBeep(MB_OK);
+    return 0;
 }
 
 static int fetchuserCASH(const char* s)
@@ -409,19 +433,6 @@ void buy_item_from_marketplace() { // buy item tab
 }
 void View_Marketplace() {
         select_from_marketplace(dir);
-    if (ImGui::TreeNode("Add Item")) {
-        ImGui::PushItemWidth(150);
-        ImGui::InputText("Item name", globals.user_item, IM_ARRAYSIZE(globals.user_item));
-        ImGui::PushItemWidth(150);
-        ImGui::InputText("Item Price", globals.user_item_price, IM_ARRAYSIZE(globals.user_item_price));
-        user.marketplace_item_name = globals.user_item;
-        user.marketplace_item_price = globals.user_item_price;
-        if (ImGui::Button("Add Item")) {
-            insert_into_marketplace(dir);
-        }
-
-        ImGui::TreePop();
-    }
     if (ImGui::Button("Back")) {
         globals.marketplace = false;
     }
@@ -545,18 +556,59 @@ start:
         globals.ATM = false;
     }
 }
+void sell_item() {
+    ImGui::InputText("Item Price", globals.user_item_price, IM_ARRAYSIZE(globals.user_item_price));
+    user.marketplace_item_price = globals.user_item_price;
+    if (ImGui::Button("Add Item")) {
+        insert_into_marketplace(dir);
+        globals.sell_item = false;
+    }
+   
+}
+void add_item() {
+    ImGui::InputText("Item Name", globals.user_item, IM_ARRAYSIZE(globals.user_item));
+    ImGui::InputText("Item Price", globals.user_item_price, IM_ARRAYSIZE(globals.user_item_price));
+    user.marketplace_item_price = globals.user_item_price;
+    user.marketplace_item_name = globals.user_item;
+    if (ImGui::Button("Generate Item")) {
+        admin_insert_into_marketplace(dir);
+        globals.generate_item = false;
+    }
+}
 static int check_for_inventory_items_callback(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc - 1; i++) {
-        ImGui::Text("item:");
+        ImGui::Selectable(argv[0]);
+
+
+        /*ImGui::Text("item:");
         ImGui::SameLine();
         ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[0]);
         ImGui::SameLine();
-        ImGui::Text("quantity:");
+        ImGui::Text("price:");
         ImGui::SameLine();
         ImGui::TextColored(ImColor(255, 0, 255), "%s", argv[1]);
-        ImGui::Separator();
+    */
     }
+    if (ImGui::BeginPopupContextItem()) {
+        ImGui::Text("actions for %s", argv[0]);
+        if (ImGui::Button("sell item")) {
+            user.marketplace_item_name = argv[0];
+            globals.sell_item = true;
+            ImGui::CloseCurrentPopup();
+
+        }
+        if (ImGui::Button("gift item")) {
+            //Todo
+            ImGui::CloseCurrentPopup();
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Close"))
+            ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+
+    }
+    return 0;
     return 0;
 
 }
@@ -972,6 +1024,10 @@ void ui::userPanel() {
         if (ImGui::Button("Remove Item(s)")) {
 
         }
+        ImGui::SameLine();
+        if (ImGui::Button("add item(s)")) {
+            globals.generate_item = true;
+        }
         if (ImGui::TreeNode("Total logins")) {
             if (ImGui::Button("Clear Logins")) {
                 clearlogins(dir);
@@ -979,6 +1035,7 @@ void ui::userPanel() {
             fetch_logins(dir);
             ImGui::TreePop();
         }
+
 
 
     }
@@ -1104,74 +1161,82 @@ void ui::render() {
 
     ImGui::Begin(window_title, &globals.active, window_flags);
     {
-        if (globals.roulette != true) {
-            if (send_message != true) {
-                if (globals.messages != true) {
-                    if (globals.modify_user != true) {
-                        if (globals.user_list != true) {
-                            if (globals.inventory != true) {
-                                if (confirm_item_from_marketplace != true) {
-                                    if (globals.ATM != true) {
-                                        if (buy_item != true) {
-                                            if (globals.marketplace != true) {
-                                                if (globals.userpanel != true) {
-                                                    ImGui::PushItemWidth(150);
-                                                    ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
-                                                    ImGui::PushItemWidth(150);
-                                                    ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
-                                                    ImGui::SameLine();
-                                                    HelpMarker("Forgot your password? Download DB browser or Delete database to recreate database.");
-                                                    if (ImGui::Button("Login")) {
-                                                        user.u_name = globals.user_name;
-                                                        user.u_pass = globals.pass_word;
-                                                        if (user.u_name.length() >= 1 && user.u_pass.length() >= 1) {
-                                                            l_login();
+        if (globals.generate_item != true) {
+            if (globals.sell_item != true) {
+                if (globals.roulette != true) {
+                    if (send_message != true) {
+                        if (globals.messages != true) {
+                            if (globals.modify_user != true) {
+                                if (globals.user_list != true) {
+                                    if (globals.inventory != true) {
+                                        if (confirm_item_from_marketplace != true) {
+                                            if (globals.ATM != true) {
+                                                if (buy_item != true) {
+                                                    if (globals.marketplace != true) {
+                                                        if (globals.userpanel != true) {
+                                                            ImGui::PushItemWidth(150);
+                                                            ImGui::InputText("Username", globals.user_name, IM_ARRAYSIZE(globals.user_name));
+                                                            ImGui::PushItemWidth(150);
+                                                            ImGui::InputText("Password", globals.pass_word, IM_ARRAYSIZE(globals.pass_word), ImGuiInputTextFlags_Password);
+                                                            ImGui::SameLine();
+                                                            HelpMarker("Forgot your password? Download DB browser or Delete database to recreate database.");
+                                                            if (ImGui::Button("Login")) {
+                                                                user.u_name = globals.user_name;
+                                                                user.u_pass = globals.pass_word;
+                                                                if (user.u_name.length() >= 1 && user.u_pass.length() >= 1) {
+                                                                    l_login();
 
+                                                                }
+                                                                else
+                                                                    MessageBeep(MB_ICONERROR);
+                                                            }
+                                                            ImGui::SameLine();
+
+                                                            if (ImGui::Button("Register")) {
+                                                                user.u_name = globals.user_name;
+                                                                user.u_pass = globals.pass_word;
+                                                                r_register();
+                                                            }
                                                         }
                                                         else
-                                                            MessageBeep(MB_ICONERROR);
+                                                            userPanel();
                                                     }
-                                                    ImGui::SameLine();
-
-                                                    if (ImGui::Button("Register")) {
-                                                        user.u_name = globals.user_name;
-                                                        user.u_pass = globals.pass_word;
-                                                        r_register();
-                                                    }
+                                                    else
+                                                        View_Marketplace();
                                                 }
                                                 else
-                                                    userPanel();
+                                                    buy_item_from_marketplace();
                                             }
                                             else
-                                                View_Marketplace();
+                                                view_atm();
                                         }
                                         else
-                                            buy_item_from_marketplace();
+                                            confirm_purchase();
                                     }
                                     else
-                                        view_atm();
+                                        view_inventory();
+
                                 }
                                 else
-                                    confirm_purchase();
+                                    view_userlist();
                             }
                             else
-                                view_inventory();
-
+                                modify_user();
                         }
                         else
-                            view_userlist();
+                            view_messages();
                     }
                     else
-                        modify_user();
+                        send_user_message();
                 }
                 else
-                    view_messages();
+                    roulette();
             }
             else
-                send_user_message();
+                sell_item();
         }
         else
-            roulette();
+            add_item();
     }
     ImGui::End();
 }

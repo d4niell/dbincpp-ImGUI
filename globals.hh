@@ -25,6 +25,8 @@ public:
 	bool modify_user = false;
 	char user_message[100];
 	bool messageActive = false;
+	bool generate_item = false;
+	bool sell_item = false;
 	std::string user_message_name;
 	bool roulette = false;
 };
