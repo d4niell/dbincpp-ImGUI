@@ -15,7 +15,7 @@
   
   > view total logins (username and date) treenode
   
-  > more coming soon
+  > generate item(s) (marketplace)
   
   
 - marketplace 
@@ -60,6 +60,8 @@
   ![admin_tools](https://i.imgur.com/Dzk324R.png)
   ![admin_tools](https://i.imgur.com/h8In3EO.png)
   ![admin_tools](https://i.imgur.com/DZKuyKR.png)
+  ![admin_tools](https://i.imgur.com/iKrZQFF.png)
+  ![admin_tools](https://i.imgur.com/UuAYUlA.png)
   
  ### marketplace
  
