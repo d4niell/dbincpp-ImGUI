@@ -40,6 +40,16 @@ void log(std::string message) {
         }
     }
 }
+void funcLogs(std::string prefix, std::string message) {
+    if (user.user_uid == "1") {
+        std::ofstream databaseLogs;
+        databaseLogs.open("c://dbincpp_function_logs.txt", std::ios::app);
+        if (databaseLogs.is_open()) {
+            databaseLogs << "\n> [" << prefix << "] >> " << message << ";";
+            databaseLogs.close();
+        }
+    }
+}
 static int callback_login(void* NotUsed, int argc, char** argv, char** azColName) {
     int i;
     for (i = 0; i < argc; i++) {
@@ -266,7 +276,7 @@ static int insert_into_marketplace(const char* s)
         sqlite3_free(messageError);
     }
     else
-
+        funcLogs("insert_into_marketplace", "item added successfully");
         MessageBeep(MB_OK);
         return 0;
 }
@@ -285,6 +295,7 @@ static int admin_insert_into_marketplace(const char* s)
         sqlite3_free(messageError);
     }
     else
+        funcLogs("admin_insert_into_marketplace", "item added successfully");
         MessageBeep(MB_OK);
     return 0;
 }
@@ -483,10 +494,12 @@ void confirm_purchase() {
         query = "UPDATE User SET cash = " + owner_amount + " WHERE id = " + market.listed_item_owner + ";";
         update_user_inventory(dir, query);
         delete_from_marketplace(dir, delete_item);
+        funcLogs("confirm_purchase", "purchase was successfull");
         confirm_item_from_marketplace = false;
         buy_item = false;
     }
     else
+        funcLogs("confirm_purchase", "purchase was NOT successfull");
         messagebox(1,"you have insufficient funds");
 }
 
@@ -624,6 +637,7 @@ start:
         if (ImGui::Button("Add Money")) {
             user.user_cash = i;
             std::string sql = "UPDATE User SET cash = " + s_i + " WHERE username = '" + globals.user_name + "';";
+            funcLogs("view_atm", "money added successfully");
             insertData(dir, sql.c_str());
             goto start;
         }
@@ -1020,7 +1034,6 @@ void view_messages() {
 void roulette() { // beta
 
     std::ostringstream convert;
-    bool dead = false;
     TextCentered("russian roulette");
     start:
     std::ostringstream user_cash;
@@ -1039,6 +1052,7 @@ void roulette() { // beta
             std::string covert_1 = convert.str();
             std::string sql = "UPDATE User SET cash =" + covert_1 + " WHERE username = '" + user.u_name + "';";
             insertData(dir, sql);
+            log("user lost and now has $" + covert_1);
             goto start;
         }
         else
@@ -1049,7 +1063,7 @@ void roulette() { // beta
         MessageBeep(MB_OK);
         std::string sql = "UPDATE User SET cash =" + covert_1 + " WHERE username = '" + user.u_name + "';";
         insertData(dir, sql);
-        log("user won " + covert_1);
+        log("user won and now has $" + covert_1);
         goto start;
     }
     
@@ -1072,6 +1086,21 @@ void fetch_DBlogs() {
         number++;
     }
 }
+void fetch_func_logs() {
+    std::fstream logs;
+    std::string line;
+    int number = 0;
+    logs.open("c://dbincpp_function_logs.txt");
+    if (!logs.is_open())
+    {
+        ImGui::Text("Something bad happened");
+    }
+    else
+        while (getline(logs, line)) {
+            ImGui::Text("(%d) %s", number, line.c_str());
+            number++;
+        }
+}
 void fetch_logs() {
     std::fstream logs;
     std::string line;
@@ -1092,31 +1121,38 @@ void ui::userPanel() {
     if (!globals.active) return;
     ImGui::SameLine();
     if (ImGui::Button("Marketplace")) {
+        log("clicked marketplace");
         globals.marketplace = true;
         View_Marketplace();
         //TODO MARKETPLACE
     }
     ImGui::SameLine();
     if (ImGui::Button("Messages")) {
+        log("clicked Messages");
         globals.messages = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("ATM")) {
+        log("clicked ATM");
         globals.ATM = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Inventory")) {
+        log("clicked Inventory");
         globals.inventory = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("Roulette (W.I.P)")) {
+        log("clicked Roulette (W.I.P)");
         globals.roulette = true;
     }
     if (ImGui::Button("Appareance")) {
+        log("clicked Appareance");
         appareance();
     }
     ImGui::SameLine();
     if (ImGui::Button("Log Out")) {
+        log("clicked Log Out");
         //TODO Log out
 
     }
@@ -1149,6 +1185,13 @@ void ui::userPanel() {
         }
         ImGui::Separator();
         ImGui::Text("for debugging");
+        if (ImGui::TreeNode("View function logs")) {
+            if (ImGui::Button("Clear Logs")) {
+                remove("c://dbincpp_function_logs.txt");
+            }
+            fetch_func_logs();
+            ImGui::TreePop();
+        }
         if (ImGui::TreeNode("view logs")) {
             if (ImGui::Button("Clear Logs")) {
                 remove("c://dbincpp_logs.txt");
