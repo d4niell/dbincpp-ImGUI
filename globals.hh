@@ -29,6 +29,7 @@ public:
 	bool sell_item = false;
 	std::string user_message_name;
 	bool roulette = false;
+	bool admin_view_all_logs = false;
 };
 struct {
 public:
