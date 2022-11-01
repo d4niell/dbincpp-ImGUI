@@ -16,7 +16,9 @@ public:
 	char user_item[100];
 	char user_item_price[100];
 	std::string item;
+	bool add_items = false;
 	bool inventory = false;
+	bool select_user_add_items = false;
 	bool user_list = false;
 	char modify_username[100];
 	char modify_password[100];
@@ -26,9 +28,14 @@ public:
 	char user_message[100];
 	bool messageActive = false;
 	bool generate_item = false;
+	bool add_to_self_user_add_items = false;
 	bool sell_item = false;
 	std::string user_message_name;
+	char generate_item_to_self[100];
 	bool roulette = false;
+	bool view_user_inventory = false;
+	std::string view_inventory_username;
+	std::string view_inventory_uid;
 	bool admin_view_all_logs = false;
 };
 struct {
