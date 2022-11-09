@@ -1,8 +1,8 @@
 - members online
 - chat
-- atm rework
-- theme
-- marketplace redesign / recode
-- remove unnecessary user input texts and replace them with more interactive code
-- make cash and bank separate (recode for atm)
-- make game styled way to get money e.g russian roulette 
+- atm rework (done)
+- theme (done)
+- marketplace redesign / recode (done)
+- remove unnecessary user input texts and replace them with more interactive code (done)
+- make cash and bank separate (recode for atm) 
+- make game styled way to get money e.g russian roulette (done) 

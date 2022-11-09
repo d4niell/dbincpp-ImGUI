@@ -19,6 +19,9 @@
   
   > logs
   
+  > view user(s) inventory
+  
+  > view all logs (purchaes & messages)
 - marketplace 
 
   > add item / buy item
@@ -62,8 +65,9 @@
   ![admin_tools](https://i.imgur.com/h8In3EO.png)
   ![admin_tools](https://i.imgur.com/DZKuyKR.png)
   ![admin_tools](https://i.imgur.com/iKrZQFF.png)
-  ![admin_tools](https://i.imgur.com/UuAYUlA.png)
-  ![admin_tools](https://i.imgur.com/AT3sfMV.png)
+  ![admin_tools](https://i.imgur.com/Xi0nArN.png)
+  ![admin_tools](https://i.imgur.com/TqnV6vg.png)
+  ![admin_tools](https://i.imgur.com/CAFnX58.png)
   
  ### marketplace
  
