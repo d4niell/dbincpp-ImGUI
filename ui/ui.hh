@@ -10,7 +10,7 @@ namespace ui {
 
 namespace ui {
 	inline LPDIRECT3DDEVICE9 dev;
-	inline const char* window_title = "dbincpp v1.0.6-beta.6";
+	inline const char* window_title = "dbincpp v1.0.6-beta.7";
 }
 
 namespace ui {

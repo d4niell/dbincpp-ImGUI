@@ -32,6 +32,7 @@ public:
 	bool sell_item = false;
 	std::string user_message_name;
 	char generate_item_to_self[100];
+	char chat_message[100];
 	bool roulette = false;
 	bool view_user_inventory = false;
 	std::string view_inventory_username;

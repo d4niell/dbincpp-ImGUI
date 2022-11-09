@@ -629,6 +629,24 @@ static int createTable(const char* s) {
                             DBlog("purchases table", Error);
                             sqlite3_free(Error);
                         }
+                        else {
+                            query = "CREATE TABLE IF NOT EXISTS Chat ("
+                                "userID INTEGER NOT NULL,"
+                                "message TEXT,"
+                                "date TEXT"
+                                "FOREIGN KEY (userID) REFERENCES(User(id));";
+                            exit = sqlite3_open(s, &db);
+                            exit = sqlite3_exec(db, query.c_str(), NULL, 0, &Error);
+                            if (exit != SQLITE_OK) {
+                                DBlog("Chat table", Error);
+                                sqlite3_free(Error);
+                            }
+                            else
+                            {
+                            
+                            }
+
+                        }
                         
                     }
                 }
@@ -1334,6 +1352,7 @@ void view_add_inventory() {
     check_for_listed_items(dir);
     if (ImGui::Button("view another user inventory")) {
         globals.select_user_add_items = true;
+        if (ImGui::Button("Back"));
     }
     ImGui::SameLine();
     if (ImGui::Button("Add to self")) {
@@ -1344,10 +1363,95 @@ void view_add_inventory() {
     }
 
 }
+static int send_msg_shoutbox(const char* s,std::string sql_query) {
+
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+
+    exit = sqlite3_exec(db, sql_query.c_str(), NULL, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        DBlog("select_user", messageError);
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
+static int callback_fetch_un(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc; i++) {
+        if (i == 0)
+        {
+            ImGui::Text("%s: ", argv[0]);
+        }
+        else
+        {
+            return 0;
+        }
+
+    }
+    return 0;
+}
+static int fetch_un(const char* s, std::string sql)
+{
+    sqlite3* DB;
+    char* messageError;
+    int exit = sqlite3_open(s, &DB);
+    /* An open database, SQL to be evaluated, Callback function, 1st argument to callback, Error msg written here*/
+    exit = sqlite3_exec(DB, sql.c_str(), callback_fetch_un, 0, &messageError);
+
+    if (exit != SQLITE_OK) {
+        DBlog("fetch_username", messageError);
+        std::cerr << "Error in selectData function." << std::endl;
+        sqlite3_free(messageError);
+    }
+    else
+        return(0);
+}
+static int select_from_shoutbox_callback(void* NotUsed, int argc, char** argv, char** azColName) {
+    int i;
+    for (i = 0; i < argc - 1; i++) {
+        std::string uid = argv[1];
+        std::string query = "SELECT username FROM User WHERE id = " + uid + ";";
+        fetch_un(dir, query);
+        ImGui::SameLine();
+        ImGui::Text(argv[0]);
+      
+    }
+    return 0;
+
+}
+static int selec_from_shoutbox(const char* s) {
+
+    sqlite3* db;
+    char* messageError;
+    int exit = sqlite3_open(s, &db);
+    std::string sql_query = "SELECT message, userID FROM Chat";
+    exit = sqlite3_exec(db, sql_query.c_str(), select_from_shoutbox_callback, 0, &messageError);
+    if (exit != SQLITE_OK) {
+        DBlog("select_user", messageError);
+        sqlite3_free(messageError);
+    }
+    else
+        return 0;
+}
 void ui::userPanel() {
 
     if (!globals.active && user.user_uid != "") return;
-    ImGui::SameLine();
+
+    if (ImGui::TreeNode("ShoutBox")) {
+        selec_from_shoutbox(dir);
+        time_t now = time(0);
+        char* dt = ctime(&now);
+        ImGui::PushItemWidth(150);
+        ImGui::InputText("message", globals.chat_message, IM_ARRAYSIZE(globals.chat_message));
+        if (ImGui::Button("Send")) {
+            std::string message = globals.chat_message;
+            std::string query = "INSERT INTO Chat (userID, message, date) VALUES (" + user.user_uid + ", '" + message + "','" + dt + "');";
+            send_msg_shoutbox(dir, query);
+        }
+        ImGui::TreePop();
+    }
     if (ImGui::Button("Marketplace")) {
         log("clicked marketplace");
         globals.marketplace = true;
